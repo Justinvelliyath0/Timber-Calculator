@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dynamic Table with PDF</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+  }
+
+  h2 {
+    text-align: center;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  th, td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: center;
+    font-size: 14px;
+  }
+
+  th {
+    background-color: #f0f0f0;
+  }
+
+  input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 4px;
+    font-size: 14px;
+  }
+
+  button {
+    margin-top: 10px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  @media (max-width: 400px) {
+    th, td {
+      padding: 6px;
+      font-size: 12px;
+    }
+    input {
+      padding: 3px;
+      font-size: 12px;
+    }
+    button {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h2>Cubic Feet Calculator</h2>
+
+<table id="dynamicTable">
+  <thead>
+    <tr>
+      <th>Length (ft)</th>
+      <th>Girth (in)</th>
+      <th>Cubic Feet</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><input type="number" step="any" class="length" placeholder="Enter"></td>
+      <td><input type="number" step="any" class="girth" placeholder="Enter"></td>
+      <td class="cubic-feet"></td>
+    </tr>
+  </tbody>
+</table>
+
+<button id="addRowBtn">Add Row</button>
+<button id="downloadPDFBtn">Download PDF</button>
+
+<!-- jsPDF and autoTable -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+const tableBody = document.getElementById('dynamicTable').getElementsByTagName('tbody')[0];
+const addRowBtn = document.getElementById('addRowBtn');
+const downloadPDFBtn = document.getElementById('downloadPDFBtn');
+
+// Calculate cubic feet
+function calculateCubicFeet(length, girth) {
+  length = parseFloat(length);
+  girth = parseFloat(girth);
+  return length && girth ? Math.round(((girth / 4) ** 2 * length / 144) * 10) / 10 : '';
+}
+
+// Update all rows
+function updateCubicFeet() {
+  const rows = tableBody.getElementsByTagName('tr');
+  for (let row of rows) {
+    const lengthInput = row.querySelector('.length').value;
+    const girthInput = row.querySelector('.girth').value;
+    row.querySelector('.cubic-feet').textContent = calculateCubicFeet(lengthInput, girthInput);
+  }
+}
+
+// Add new row
+function addRow() {
+  const newRow = tableBody.insertRow();
+  const cell1 = newRow.insertCell(0);
+  const cell2 = newRow.insertCell(1);
+  const cell3 = newRow.insertCell(2);
+  cell1.innerHTML = '<input type="number" step="any" class="length" placeholder="Enter">';
+  cell2.innerHTML = '<input type="number" step="any" class="girth" placeholder="Enter">';
+  cell3.className = 'cubic-feet';
+
+  newRow.querySelectorAll('input').forEach(input => {
+    input.addEventListener('input', updateCubicFeet);
+  });
+}
+
+// Attach input listeners to initial row
+tableBody.querySelectorAll('input').forEach(input => {
+  input.addEventListener('input', updateCubicFeet);
+});
+
+// Button listeners
+addRowBtn.addEventListener('click', addRow);
+
+// Download PDF using autoTable
+downloadPDFBtn.addEventListener('click', () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  // Prepare headers
+  const headers = Array.from(document.querySelectorAll("#dynamicTable thead th")).map(th => th.textContent);
+
+  // Prepare data
+  const data = [];
+  const rows = tableBody.getElementsByTagName('tr');
+  for (let row of rows) {
+    const cells = Array.from(row.cells).map(cell => cell.textContent || cell.querySelector('input')?.value || '');
+    data.push(cells);
+  }
+
+  // Generate table in PDF
+  doc.autoTable({
+    head: [headers],
+    body: data,
+    startY: 20,
+  });
+
+  doc.save("cubic_feet_table.pdf");
+});
+</script>
+
+</body>
+</html>
