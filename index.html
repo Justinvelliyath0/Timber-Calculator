@@ -1,165 +1,308 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dynamic Table with PDF</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    padding: 20px;
-  }
-
-  h2 {
-    text-align: center;
-  }
-
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
-  }
-
-  th, td {
-    border: 1px solid #ccc;
-    padding: 8px;
-    text-align: center;
-    font-size: 14px;
-  }
-
-  th {
-    background-color: #f0f0f0;
-  }
-
-  input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 4px;
-    font-size: 14px;
-  }
-
-  button {
-    margin-top: 10px;
-    padding: 8px 16px;
-    font-size: 14px;
-    cursor: pointer;
-  }
-
-  @media (max-width: 400px) {
-    th, td {
-      padding: 6px;
-      font-size: 12px;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timber Cubic Feet Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
     }
+
+    h2 {
+      text-align: center;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    th,
+    td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+      font-size: 14px;
+    }
+
+
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+      /* Gray alternate rows */
+    }
+
+    th:first-child,
+    td:first-child {
+      width: 25px;
+    }
+
     input {
-      padding: 3px;
-      font-size: 12px;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 4px;
+      font-size: 14px;
     }
+
     button {
-      padding: 6px 12px;
-      font-size: 12px;
+      margin-top: 10px;
+      margin-right: 5px;
+      padding: 8px 16px;
+      font-size: 14px;
+      cursor: pointer;
     }
-  }
-</style>
+
+    /* Confirmation modal styles */
+    .modal {
+      display: none;
+      /* hidden by default */
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      max-width: 300px;
+      margin: 15% auto;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .modal-content h3 {
+      margin-bottom: 15px;
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: space-around;
+    }
+
+    .modal-buttons button {
+      min-width: 80px;
+    }
+
+    .button-group {
+      margin-top: 15px;
+      display: flex;
+      justify-content: center;
+      gap: 2px;
+      /* space between buttons */
+    }
+
+    button {
+      padding: 8px 8px;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #3f4041;
+      color: white;
+      transition: background 0.2s;
+    }
+
+
+    @media (max-width: 400px) {
+
+      th,
+      td {
+        padding: 6px;
+        font-size: 12px;
+      }
+
+      input {
+        padding: 3px;
+        font-size: 12px;
+      }
+
+      button {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+    }
+  </style>
 </head>
+
 <body>
 
-<h2>Cubic Feet Calculator</h2>
+  <h2>Timber Cubic Feet Calculator</h2>
 
-<table id="dynamicTable">
-  <thead>
-    <tr>
-      <th>Length (ft)</th>
-      <th>Girth (in)</th>
-      <th>Cubic Feet</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><input type="number" step="any" class="length" placeholder="Enter"></td>
-      <td><input type="number" step="any" class="girth" placeholder="Enter"></td>
-      <td class="cubic-feet"></td>
-    </tr>
-  </tbody>
-</table>
+  <table id="dynamicTable">
+    <thead>
+      <tr>
+        <th>No.</th>
+        <th>Length (ft)</th>
+        <th>Girth (in)</th>
+        <th>Cubic Feet</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="row-no">1</td>
+        <td><input type="number" step="any" class="length" placeholder="Enter Length"></td>
+        <td><input type="number" step="any" class="girth" placeholder="Enter Girth"></td>
+        <td class="cubic-feet"></td>
+      </tr>
+    </tbody>
+  </table>
 
-<button id="addRowBtn">Add Row</button>
-<button id="downloadPDFBtn">Download PDF</button>
+  <div class="button-group">
+    <button id="addRowBtn">➕ Add Row</button>
+    <button id="downloadPDFBtn">📄 Download PDF</button>
+    <button id="clearTableBtn">🗑️ Clear Table</button>
+  </div>
 
-<!-- jsPDF and autoTable -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <!-- Custom Confirmation Modal -->
+  <div id="confirmModal" class="modal">
+    <div class="modal-content">
+      <h3>Clear all data?</h3>
+      <p>This action cannot be undone.</p>
+      <div class="modal-buttons">
+        <button id="confirmYes">Yes</button>
+        <button id="confirmNo">No</button>
+      </div>
+    </div>
+  </div>
 
-<script>
-const tableBody = document.getElementById('dynamicTable').getElementsByTagName('tbody')[0];
-const addRowBtn = document.getElementById('addRowBtn');
-const downloadPDFBtn = document.getElementById('downloadPDFBtn');
+  <!-- jsPDF and autoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
-// Calculate cubic feet
-function calculateCubicFeet(length, girth) {
-  length = parseFloat(length);
-  girth = parseFloat(girth);
-  return length && girth ? Math.round(((girth / 4) ** 2 * length / 144) * 10) / 10 : '';
-}
+  <script>
+    const tableBody = document.getElementById('dynamicTable').getElementsByTagName('tbody')[0];
+    const addRowBtn = document.getElementById('addRowBtn');
+    const downloadPDFBtn = document.getElementById('downloadPDFBtn');
+    const clearTableBtn = document.getElementById('clearTableBtn');
 
-// Update all rows
-function updateCubicFeet() {
-  const rows = tableBody.getElementsByTagName('tr');
-  for (let row of rows) {
-    const lengthInput = row.querySelector('.length').value;
-    const girthInput = row.querySelector('.girth').value;
-    row.querySelector('.cubic-feet').textContent = calculateCubicFeet(lengthInput, girthInput);
-  }
-}
+    const modal = document.getElementById('confirmModal');
+    const confirmYes = document.getElementById('confirmYes');
+    const confirmNo = document.getElementById('confirmNo');
 
-// Add new row
-function addRow() {
-  const newRow = tableBody.insertRow();
-  const cell1 = newRow.insertCell(0);
-  const cell2 = newRow.insertCell(1);
-  const cell3 = newRow.insertCell(2);
-  cell1.innerHTML = '<input type="number" step="any" class="length" placeholder="Enter">';
-  cell2.innerHTML = '<input type="number" step="any" class="girth" placeholder="Enter">';
-  cell3.className = 'cubic-feet';
+    const STORAGE_KEY = 'cubicFeetTableData';
+    const STORAGE_TTL = 24 * 60 * 60 * 1000; // 1 day
 
-  newRow.querySelectorAll('input').forEach(input => {
-    input.addEventListener('input', updateCubicFeet);
-  });
-}
+    function calculateCubicFeet(length, girth) {
+      length = parseFloat(length);
+      girth = parseFloat(girth);
+      return length && girth ? Math.round(((girth / 4) ** 2 * length / 144) * 10) / 10 : '';
+    }
 
-// Attach input listeners to initial row
-tableBody.querySelectorAll('input').forEach(input => {
-  input.addEventListener('input', updateCubicFeet);
-});
+    function updateCubicFeet() {
+      const rows = tableBody.getElementsByTagName('tr');
+      Array.from(rows).forEach((row, index) => {
+        row.querySelector('.row-no').textContent = index + 1;
+        const lengthInput = row.cells[1].querySelector('.length').value;
+        const girthInput = row.cells[2].querySelector('.girth').value;
+        row.cells[3].textContent = calculateCubicFeet(lengthInput, girthInput);
+      });
+      saveTableData();
+    }
 
-// Button listeners
-addRowBtn.addEventListener('click', addRow);
+    function addRow(length = '', girth = '') {
+      const newRow = tableBody.insertRow();
+      const cell0 = newRow.insertCell(0);
+      const cell1 = newRow.insertCell(1);
+      const cell2 = newRow.insertCell(2);
+      const cell3 = newRow.insertCell(3);
 
-// Download PDF using autoTable
-downloadPDFBtn.addEventListener('click', () => {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+      cell0.className = 'row-no';   // leave empty, updateCubicFeet() will fill it
+      cell0.textContent = '';
 
-  // Prepare headers
-  const headers = Array.from(document.querySelectorAll("#dynamicTable thead th")).map(th => th.textContent);
+      cell1.innerHTML = `<input type="number" step="any" class="length" placeholder="Enter Length" value="${length}">`;
+      cell2.innerHTML = `<input type="number" step="any" class="girth" placeholder="Enter Girth" value="${girth}">`;
+      cell3.className = 'cubic-feet';
+      cell3.textContent = calculateCubicFeet(length, girth);
 
-  // Prepare data
-  const data = [];
-  const rows = tableBody.getElementsByTagName('tr');
-  for (let row of rows) {
-    const cells = Array.from(row.cells).map(cell => cell.textContent || cell.querySelector('input')?.value || '');
-    data.push(cells);
-  }
+      newRow.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', updateCubicFeet);
+      });
 
-  // Generate table in PDF
-  doc.autoTable({
-    head: [headers],
-    body: data,
-    startY: 20,
-  });
+      updateCubicFeet(); // 🔑 renumber rows after adding
+    }
 
-  doc.save("cubic_feet_table.pdf");
-});
-</script>
+
+    function saveTableData() {
+      const rows = tableBody.getElementsByTagName('tr');
+      const data = [];
+      for (let row of rows) {
+        const length = row.cells[1].querySelector('.length').value;
+        const girth = row.cells[2].querySelector('.girth').value;
+        if (length || girth) data.push({ length, girth });
+      }
+      const storeObj = { data, expiry: Date.now() + STORAGE_TTL };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(storeObj));
+    }
+
+    function loadTableData() {
+      const itemStr = localStorage.getItem(STORAGE_KEY);
+      if (!itemStr) return;
+      const item = JSON.parse(itemStr);
+      if (Date.now() > item.expiry) {
+        localStorage.removeItem(STORAGE_KEY);
+        return;
+      }
+      const savedData = item.data;
+      tableBody.innerHTML = '';
+      savedData.forEach(rowData => addRow(rowData.length, rowData.girth));
+    }
+
+    function clearTable() {
+      tableBody.innerHTML = '';
+      const newRow = tableBody.insertRow();
+      newRow.innerHTML = `
+    <td class="row-no">1</td>
+    <td><input type="number" step="any" class="length" placeholder="Enter Length"></td>
+    <td><input type="number" step="any" class="girth" placeholder="Enter Girth"></td>
+    <td class="cubic-feet"></td>
+  `;
+      newRow.querySelectorAll('input').forEach(input => {
+        input.addEventListener('input', updateCubicFeet);
+      });
+      localStorage.removeItem(STORAGE_KEY);
+    }
+
+    // Event listeners
+    addRowBtn.addEventListener('click', addRow);
+    clearTableBtn.addEventListener('click', () => modal.style.display = 'block');
+    confirmYes.addEventListener('click', () => {
+      clearTable();
+      modal.style.display = 'none';
+    });
+    confirmNo.addEventListener('click', () => modal.style.display = 'none');
+
+    downloadPDFBtn.addEventListener('click', () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const headers = Array.from(document.querySelectorAll("#dynamicTable thead th")).map(th => th.textContent);
+      const data = [];
+      const rows = tableBody.getElementsByTagName('tr');
+      for (let row of rows) {
+        const cells = Array.from(row.cells).map(cell => cell.textContent || cell.querySelector('input')?.value || '');
+        data.push(cells);
+      }
+      doc.autoTable({
+        head: [headers],
+        body: data,
+        startY: 20,
+        styles: { lineColor: [0, 0, 0], lineWidth: 0.2 },
+        headStyles: { fillColor: [107, 115, 120] },
+        alternateRowStyles: { fillColor: [245, 245, 245] },
+      });
+      doc.save("cubic_feet_table.pdf");
+    });
+
+    // Load saved data
+    loadTableData();
+  </script>
 
 </body>
+
 </html>
