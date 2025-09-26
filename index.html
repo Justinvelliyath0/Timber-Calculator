@@ -29,10 +29,15 @@
       font-size: 14px;
     }
 
+    thead th {
+      background-color: #3f4041;
+      color: #fff;
+      cursor: pointer;
+      user-select: none;
+    }
 
-    tr:nth-child(even) {
+    tbody tr:nth-child(even) {
       background-color: #f9f9f9;
-      /* Gray alternate rows */
     }
 
     th:first-child,
@@ -47,18 +52,30 @@
       font-size: 14px;
     }
 
-    button {
-      margin-top: 10px;
-      margin-right: 5px;
-      padding: 8px 16px;
-      font-size: 14px;
-      cursor: pointer;
+    .button-group {
+      margin-top: 15px;
+      display: flex;
+      justify-content: center;
+      gap: 2px;
     }
 
-    /* Confirmation modal styles */
+    button {
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #3f4041;
+      color: white;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background-color: #2b2c2d;
+    }
+
     .modal {
       display: none;
-      /* hidden by default */
       position: fixed;
       z-index: 1000;
       left: 0;
@@ -77,56 +94,14 @@
       text-align: center;
     }
 
-    .modal-content h3 {
-      margin-bottom: 15px;
-    }
-
     .modal-buttons {
       display: flex;
       justify-content: space-around;
+      margin-top: 10px;
     }
 
     .modal-buttons button {
       min-width: 80px;
-    }
-
-    .button-group {
-      margin-top: 15px;
-      display: flex;
-      justify-content: center;
-      gap: 2px;
-      /* space between buttons */
-    }
-
-    button {
-      padding: 8px 8px;
-      font-size: 14px;
-      cursor: pointer;
-      border: none;
-      border-radius: 5px;
-      background-color: #3f4041;
-      color: white;
-      transition: background 0.2s;
-    }
-
-
-    @media (max-width: 400px) {
-
-      th,
-      td {
-        padding: 6px;
-        font-size: 12px;
-      }
-
-      input {
-        padding: 3px;
-        font-size: 12px;
-      }
-
-      button {
-        padding: 6px 12px;
-        font-size: 12px;
-      }
     }
   </style>
 </head>
@@ -139,8 +114,8 @@
     <thead>
       <tr>
         <th>No.</th>
-        <th>Length (ft)</th>
-        <th>Girth (in)</th>
+        <th id="lengthHeader">Length (ft) </th>
+        <th id="girthHeader">Girth (in) </th>
         <th>Cubic Feet</th>
       </tr>
     </thead>
@@ -149,9 +124,15 @@
         <td class="row-no">1</td>
         <td><input type="number" step="any" class="length" placeholder="Enter Length"></td>
         <td><input type="number" step="any" class="girth" placeholder="Enter Girth"></td>
-        <td class="cubic-feet"></td>
+        <td class="cubic-feet">0</td>
       </tr>
     </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3"><b>Total</b></td>
+        <td class="total-cubic">0</td>
+      </tr>
+    </tfoot>
   </table>
 
   <div class="button-group">
@@ -160,7 +141,6 @@
     <button id="clearTableBtn">🗑️ Clear Table</button>
   </div>
 
-  <!-- Custom Confirmation Modal -->
   <div id="confirmModal" class="modal">
     <div class="modal-content">
       <h3>Clear all data?</h3>
@@ -172,135 +152,203 @@
     </div>
   </div>
 
-  <!-- jsPDF and autoTable -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
   <script>
-    const tableBody = document.getElementById('dynamicTable').getElementsByTagName('tbody')[0];
+    const tableBody = document.querySelector("#dynamicTable tbody");
     const addRowBtn = document.getElementById('addRowBtn');
     const downloadPDFBtn = document.getElementById('downloadPDFBtn');
     const clearTableBtn = document.getElementById('clearTableBtn');
-
     const modal = document.getElementById('confirmModal');
     const confirmYes = document.getElementById('confirmYes');
     const confirmNo = document.getElementById('confirmNo');
-
+    const lengthHeader = document.getElementById('lengthHeader');
+    const girthHeader = document.getElementById('girthHeader');
     const STORAGE_KEY = 'cubicFeetTableData';
-    const STORAGE_TTL = 24 * 60 * 60 * 1000; // 1 day
+    const STORAGE_TTL = 24 * 60 * 60 * 1000;
+
+    let lengthAsc = true;
+    let girthAsc = true;
 
     function calculateCubicFeet(length, girth) {
       length = parseFloat(length);
       girth = parseFloat(girth);
-      return length && girth ? Math.round(((girth / 4) ** 2 * length / 144) * 10) / 10 : '';
+      return length && girth ? Math.round(((girth / 4) ** 2 * length / 144) * 10) / 10 : 0;
+    }
+
+    function updateRowColors() {
+      tableBody.querySelectorAll('tr').forEach(row => {
+        const girth = parseFloat(row.querySelector('.girth').value) || 0;
+        const noCell = row.querySelector('.row-no');
+        noCell.style.backgroundColor = '';
+        noCell.style.color = '';
+        if (girth >= 48) { noCell.style.backgroundColor = '#ff4d4d'; noCell.style.color = '#fff'; }
+        else if (girth >= 36) { noCell.style.backgroundColor = '#ffa500'; noCell.style.color = '#fff'; }
+        else if (girth >= 24) { noCell.style.backgroundColor = '#ffff66'; noCell.style.color = '#000'; }
+      });
+    }
+
+    function updateTotal() {
+      const total = Array.from(tableBody.querySelectorAll('.cubic-feet'))
+        .reduce((sum, td) => sum + parseFloat(td.textContent || 0), 0);
+      document.querySelector('.total-cubic').textContent = Math.round(total * 10) / 10;
     }
 
     function updateCubicFeet() {
-      const rows = tableBody.getElementsByTagName('tr');
-      Array.from(rows).forEach((row, index) => {
+      tableBody.querySelectorAll('tr').forEach((row, index) => {
         row.querySelector('.row-no').textContent = index + 1;
-        const lengthInput = row.cells[1].querySelector('.length').value;
-        const girthInput = row.cells[2].querySelector('.girth').value;
-        row.cells[3].textContent = calculateCubicFeet(lengthInput, girthInput);
+        const length = row.querySelector('.length').value;
+        const girth = row.querySelector('.girth').value;
+        row.querySelector('.cubic-feet').textContent = calculateCubicFeet(length, girth);
       });
+      updateRowColors();
+      updateTotal();
       saveTableData();
     }
 
     function addRow(length = '', girth = '') {
-      const newRow = tableBody.insertRow();
-      const cell0 = newRow.insertCell(0);
-      const cell1 = newRow.insertCell(1);
-      const cell2 = newRow.insertCell(2);
-      const cell3 = newRow.insertCell(3);
-
-      cell0.className = 'row-no';   // leave empty, updateCubicFeet() will fill it
-      cell0.textContent = '';
-
-      cell1.innerHTML = `<input type="number" step="any" class="length" placeholder="Enter Length" value="${length}">`;
-      cell2.innerHTML = `<input type="number" step="any" class="girth" placeholder="Enter Girth" value="${girth}">`;
-      cell3.className = 'cubic-feet';
-      cell3.textContent = calculateCubicFeet(length, girth);
-
-      newRow.querySelectorAll('input').forEach(input => {
-        input.addEventListener('input', updateCubicFeet);
-      });
-
-      updateCubicFeet(); // 🔑 renumber rows after adding
+      const newRow = document.createElement('tr');
+      newRow.innerHTML = `
+    <td class="row-no"></td>
+    <td><input type="number" step="any" class="length" placeholder="Enter Length" value="${length}"></td>
+    <td><input type="number" step="any" class="girth" placeholder="Enter Girth" value="${girth}"></td>
+    <td class="cubic-feet">${calculateCubicFeet(length, girth)}</td>
+  `;
+      tableBody.appendChild(newRow);
+      newRow.querySelectorAll('input').forEach(input => input.addEventListener('input', updateCubicFeet));
+      updateCubicFeet();
     }
 
-
     function saveTableData() {
-      const rows = tableBody.getElementsByTagName('tr');
       const data = [];
-      for (let row of rows) {
-        const length = row.cells[1].querySelector('.length').value;
-        const girth = row.cells[2].querySelector('.girth').value;
+      tableBody.querySelectorAll('tr').forEach(row => {
+        const length = row.querySelector('.length').value;
+        const girth = row.querySelector('.girth').value;
         if (length || girth) data.push({ length, girth });
-      }
-      const storeObj = { data, expiry: Date.now() + STORAGE_TTL };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(storeObj));
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ data, expiry: Date.now() + STORAGE_TTL }));
     }
 
     function loadTableData() {
       const itemStr = localStorage.getItem(STORAGE_KEY);
-      if (!itemStr) return;
+      if (!itemStr) { updateCubicFeet(); return; }
       const item = JSON.parse(itemStr);
-      if (Date.now() > item.expiry) {
-        localStorage.removeItem(STORAGE_KEY);
-        return;
-      }
-      const savedData = item.data;
+      if (Date.now() > item.expiry) { localStorage.removeItem(STORAGE_KEY); return; }
       tableBody.innerHTML = '';
-      savedData.forEach(rowData => addRow(rowData.length, rowData.girth));
+      item.data.forEach(rowData => addRow(rowData.length, rowData.girth));
     }
 
     function clearTable() {
       tableBody.innerHTML = '';
-      const newRow = tableBody.insertRow();
-      newRow.innerHTML = `
-    <td class="row-no">1</td>
-    <td><input type="number" step="any" class="length" placeholder="Enter Length"></td>
-    <td><input type="number" step="any" class="girth" placeholder="Enter Girth"></td>
-    <td class="cubic-feet"></td>
-  `;
-      newRow.querySelectorAll('input').forEach(input => {
-        input.addEventListener('input', updateCubicFeet);
-      });
+      addRow();
       localStorage.removeItem(STORAGE_KEY);
     }
 
+    function sortTableByColumn(columnClass, ascending, headerElement) {
+      const rowsArray = Array.from(tableBody.querySelectorAll('tr'));
+
+      // Sort rows
+      rowsArray.sort((a, b) => {
+        const aVal = parseFloat(a.querySelector(`.${columnClass}`).value) || 0;
+        const bVal = parseFloat(b.querySelector(`.${columnClass}`).value) || 0;
+        return ascending ? aVal - bVal : bVal - aVal;
+      });
+
+      // Rebuild table
+      tableBody.innerHTML = '';
+      rowsArray.forEach(r => tableBody.appendChild(r));
+
+      // Update rows (numbers, colors, totals)
+      updateCubicFeet();
+
+      // Reset all headers
+      lengthHeader.textContent = "Length (ft)";
+      girthHeader.textContent = "Girth (in)";
+
+      // Add triangle to active sorted column
+      headerElement.textContent += ascending ? " ▲" : " ▼";
+    }
+
+
     // Event listeners
-    addRowBtn.addEventListener('click', addRow);
+    addRowBtn.addEventListener('click', () => addRow());
     clearTableBtn.addEventListener('click', () => modal.style.display = 'block');
-    confirmYes.addEventListener('click', () => {
-      clearTable();
-      modal.style.display = 'none';
-    });
+    confirmYes.addEventListener('click', () => { clearTable(); modal.style.display = 'none'; });
     confirmNo.addEventListener('click', () => modal.style.display = 'none');
+    lengthHeader.addEventListener('click', () => {
+      sortTableByColumn('length', lengthAsc, lengthHeader);
+      lengthAsc = !lengthAsc;
+    });
+
+    girthHeader.addEventListener('click', () => {
+      sortTableByColumn('girth', girthAsc, girthHeader);
+      girthAsc = !girthAsc;
+    });
 
     downloadPDFBtn.addEventListener('click', () => {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-      const headers = Array.from(document.querySelectorAll("#dynamicTable thead th")).map(th => th.textContent);
+
+      // Get headers without arrows
+      const headers = Array.from(document.querySelectorAll("#dynamicTable thead th"))
+        .map(th => th.textContent.replace(/[\u2190-\u21FF▲▼]/g, '').trim());
+
       const data = [];
-      const rows = tableBody.getElementsByTagName('tr');
-      for (let row of rows) {
+      tableBody.querySelectorAll('tr').forEach(row => {
         const cells = Array.from(row.cells).map(cell => cell.textContent || cell.querySelector('input')?.value || '');
         data.push(cells);
-      }
+      });
+
+      // Determine No. column colors
+      const noColors = [];
+      tableBody.querySelectorAll('tr').forEach(row => {
+        const girth = parseFloat(row.querySelector('.girth').value) || 0;
+        if (girth >= 48) noColors.push([255, 77, 77]);
+        else if (girth >= 36) noColors.push([255, 165, 0]);
+        else if (girth >= 24) noColors.push([255, 255, 102]);
+        else noColors.push(null);
+      });
+
+      // Add total row with first 3 columns merged (no background color)
+      const totalValue = document.querySelector('.total-cubic').textContent;
+      data.push([
+        { content: 'Total', colSpan: 3, styles: { halign: 'center', fillColor: null, textColor: 0 } },
+        totalValue
+      ]);
+
       doc.autoTable({
         head: [headers],
         body: data,
         startY: 20,
         styles: { lineColor: [0, 0, 0], lineWidth: 0.2 },
-        headStyles: { fillColor: [107, 115, 120] },
-        alternateRowStyles: { fillColor: [245, 245, 245] },
+        headStyles: { fillColor: [63, 64, 65], textColor: 255 },
+        alternateRowStyles: { fillColor: [249, 249, 249] },
+        didParseCell: function (dataCell) {
+          // Color No. column in body
+          if (dataCell.row.section === 'body' && dataCell.column.index === 0 && noColors[dataCell.row.index]) {
+            dataCell.cell.styles.fillColor = noColors[dataCell.row.index];
+          }
+          // Total row first cell merged styling
+          if (dataCell.row.section === 'body' && dataCell.cell.raw && dataCell.cell.raw.colSpan === 3) {
+            dataCell.cell.styles.halign = 'center';
+            dataCell.cell.styles.fillColor = null; // no background
+            dataCell.cell.styles.textColor = 0;
+          }
+        }
       });
+
       doc.save("cubic_feet_table.pdf");
     });
 
+
+    // Initial input listeners
+    tableBody.querySelectorAll('input').forEach(input => input.addEventListener('input', updateCubicFeet));
+
     // Load saved data
     loadTableData();
+    updateCubicFeet();
+
   </script>
 
 </body>
